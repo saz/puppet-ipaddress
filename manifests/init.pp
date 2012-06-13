@@ -16,13 +16,9 @@ define ipaddress (
   $ipaddr,
   $netmask,
   $ensure = present,
-  $up = true,
-  $onboot = true,
   $family = 'inet', 
 	$method = 'static',
-  hwaddr = false,
-  $network = false,
-	$gateway = false
+	$gateway = undef
 ) {
 
   case $::operatingsystem {
@@ -30,89 +26,65 @@ define ipaddress (
       # Device string for augeas
       $cur_device = "iface[. = '${device}']"
 
-      if $ensure == 'present' {
-        if $onboot {
-          augeas { "auto-${device}":
-            context => '/files/etc/network/interfaces',
+      # Set some default values
+      Augeas {
+        incl => '/etc/network/interfaces',
+        lens => 'Interfaces.lns',
+      }
+
+      case $ensure {
+        present: {
+          augeas { "auto-${device}-${family}":
             changes => "set auto[child::1 = '${device}']/1 ${device}",
+            onlyif  => "match auto/* ${device} == 0",
+            notify  => Exec["ifup-${device}"],
           }
-        }
 
-        augeas { "common-${device}":
-          context   => '/files/etc/network/interfaces',
-          changes   => [
-            "set ${cur_device} ${device}",
-            "set ${cur_device}/family ${family}",
-            "set ${cur_device}/method ${method}",
-          ],
-          require   => $onboot ? {
-              true    => Augeas["auto-${device}"],
-              default => undef,
-          },
-        }
+          augeas { "iface-${device}-${family}":
+            changes => [
+              "set ${cur_device} ${device}",
+              "set ${cur_device}/family ${family}",
+              "set ${cur_device}/method ${method}",
+            ],
+            onlyif  => "match ${cur_device} size == 0",
+            require => Augeas["auto-${device}-${family}"],
+            notify  => Exec["ifup-${device}"],
+          }
 
-        case $method {
-          'static': {
-            augeas { "address-${device}":
-              context => '/files/etc/network/interfaces',
-              changes => [
-                "set ${cur_device}/address ${ipaddr}",
-                "set ${cur_device}/netmask ${netmask}",
-              ],
-              require => Augeas["common-${device}"],
+          case $method {
+            'static': {
+              augeas { "static-${device}-${family}":
+                changes => [
+                  "set ${cur_device}/address ${ipaddr}",
+                  "set ${cur_device}/netmask ${netmask}",
+                ],
+                require => Augeas["iface-${device}-${family}"],
+                notify  => Exec["ifup-${device}"],
+              }
+
+              if $gateway {
+                augeas { "gateway-${device}-${family}":
+                  context => '/files/etc/network/interfaces',
+                  changes => "set ${cur_device}/gateway ${gateway}",
+                  require => Augeas["static-${device}"],
+                  notify  => Exec["ifup-${device}"],
+                }
+
+                $require_exec = [
+                  Augeas["iface-${device}-${family}"],
+                  Augeas["gateway-${device}-${family}"],
+                ]
+              } else {
+                $require_exec = Augeas["static-${device}-${family}"]
+              }
             }
           }
-        }
 
-        if $hwaddr {
-          augeas { "mac-${device}":
-            context => '/files/etc/network/interfaces',
-            changes => "set ${cur_device}/hwaddress ${hwaddr}",
-            require => Augeas["common-${device}"],
-          }
-        }
-
-        if $network {
-          augeas { "network-${device}":
-            context => '/files/etc/network/interfaces',
-            changes => "set ${cur_device}/network ${network}",
-            require => Augeas["common-${device}"],
-          }
-        }
-
-        if $gateway {
-          augeas { "gateway-${device}":
-            context => '/files/etc/network/interfaces',
-            changes => "set ${cur_device}/gateway ${gateway}",
-            require => Augeas["common-${device}"],
-          }
-        }
-
-        if $up {
           exec { "ifup-${device}":
-            command => "/sbin/ifup ${device}",
-            unless  => "/sbin/ifconfig | grep ${device}",
-            require => Augeas["common-${device}"],
+            command     => "/sbin/ifup --force ${device}",
+            require     => $require_exec,
+            refreshonly => true,
           }
-        } else {
-            exec { "ifdown-${device}":
-              command => "/sbin/ifdown ${device}",
-              onlyif => "/sbin/ifconfig | grep ${device}",
-            }
-        }
-      } else {
-        exec { "ifdown-${device}":
-          command => "/sbin/ifdown ${device}",
-          onlyif => "/sbin/ifconfig | grep ${device}",
-        }
-
-        augeas { "remove-${device}":
-          context => '/files/etc/network/interfaces',
-          changes => [
-            "rm ${cur_device}",
-            "rm auto[child::1 = '${device}']",
-          ],
-          require => Exec["ifdown-${device}"],
         }
       }
     }
