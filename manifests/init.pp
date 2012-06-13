@@ -36,7 +36,7 @@ define ipaddress (
       case $ensure {
         present: {
           augeas { "auto-${device}-${family}":
-            changes => "set auto[last()+1]/1 ${device}",
+            changes => "set auto[child::0 = '${device}']/1 ${device}",
             onlyif  => "match auto/* not_include ${device}",
             notify  => Exec["ifup-${device}-${family}"],
           }
