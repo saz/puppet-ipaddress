@@ -17,14 +17,15 @@ define ipaddress (
   $netmask,
   $ensure = present,
   $family = 'inet', 
-	$method = 'static',
-	$gateway = undef
+  $method = 'static',
+  $gateway = undef
 ) {
 
   case $::operatingsystem {
     /(Ubuntu|Debian)/: {
       # Device string for augeas
-      $cur_device = "iface[. = '${device}']"
+      $cur_device = "iface[. = '${device}'][family='${family}']"
+      $cur_device_family = "${cur_device}/family"
 
       # Set some default values
       Augeas {
@@ -35,18 +36,18 @@ define ipaddress (
       case $ensure {
         present: {
           augeas { "auto-${device}-${family}":
-            changes => "set auto[child::1 = '${device}']/1 ${device}",
+            changes => "set auto[last()+1]/1 ${device}",
             onlyif  => "match auto/* not_include ${device}",
             notify  => Exec["ifup-${device}-${family}"],
           }
 
           augeas { "iface-${device}-${family}":
             changes => [
-              "set iface[last()+1] ${device}",
-              "set ${cur_device}/family ${family}",
-              "set ${cur_device}/method ${method}",
+              "defnode curdev iface[last()+1] ${device}",
+              "set \$curdev/family ${family}",
+              "set \$curdev/method ${method}",
             ],
-            #onlyif  => "get ${cur_device}/family[.='${family}'] != ${family}",
+            onlyif  => "get ${cur_device_family} != ${family}",
             require => Augeas["auto-${device}-${family}"],
             notify  => Exec["ifup-${device}-${family}"],
           }
