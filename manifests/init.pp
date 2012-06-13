@@ -80,7 +80,7 @@ define ipaddress (
             }
           }
 
-          exec { "ifup-${device}":
+          exec { "ifup-${device}-${family}":
             command     => "/sbin/ifup --force ${device}",
             require     => $require_exec,
             refreshonly => true,
