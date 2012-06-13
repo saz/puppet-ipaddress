@@ -42,7 +42,7 @@ define ipaddress (
 
           augeas { "iface-${device}-${family}":
             changes => [
-              "defnode curdev iface[last()] ${device}",
+              "defnode curdev iface[last()+1] ${device}",
               "set \$curdev/family ${family}",
               "set \$curdev/method ${method}",
             ],
