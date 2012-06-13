@@ -42,9 +42,9 @@ define ipaddress (
 
           augeas { "iface-${device}-${family}":
             changes => [
-              "set ${cur_device} ${device}",
-              "set ${cur_device}/family ${family}",
-              "set ${cur_device}/method ${method}",
+              "defnode curdev iface[last()] ${device}",
+              "set \$curdev/family ${family}",
+              "set \$curdev/method ${method}",
             ],
             onlyif  => "match ${cur_device}/family not_include ${family}",
             require => Augeas["auto-${device}-${family}"],
