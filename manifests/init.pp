@@ -46,7 +46,7 @@ define ipaddress (
               "set \$curdev/family ${family}",
               "set \$curdev/method ${method}",
             ],
-            onlyif  => "get ${cur_device}/family[.='${family}'] != ${family}",
+            #onlyif  => "get ${cur_device}/family[.='${family}'] != ${family}",
             require => Augeas["auto-${device}-${family}"],
             notify  => Exec["ifup-${device}-${family}"],
           }
