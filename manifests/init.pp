@@ -46,7 +46,7 @@ define ipaddress (
               "set ${cur_device}/family ${family}",
               "set ${cur_device}/method ${method}",
             ],
-            onlyif  => "match ${cur_device}/${family} size == 0",
+            onlyif  => "match ${cur_device}/family[.='${family}'] size == 0",
             require => Augeas["auto-${device}-${family}"],
             notify  => Exec["ifup-${device}-${family}"],
           }
