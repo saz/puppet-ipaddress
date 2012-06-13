@@ -37,7 +37,7 @@ define ipaddress (
           augeas { "auto-${device}-${family}":
             changes => "set auto[child::1 = '${device}']/1 ${device}",
             onlyif  => "match auto/* not_include ${device}",
-            notify  => Exec["ifup-${device}"],
+            notify  => Exec["ifup-${device}-${family}"],
           }
 
           augeas { "iface-${device}-${family}":
@@ -48,7 +48,7 @@ define ipaddress (
             ],
             onlyif  => "match ${cur_device} size == 0",
             require => Augeas["auto-${device}-${family}"],
-            notify  => Exec["ifup-${device}"],
+            notify  => Exec["ifup-${device}-${family}"],
           }
 
           case $method {
@@ -59,7 +59,7 @@ define ipaddress (
                   "set ${cur_device}/netmask ${netmask}",
                 ],
                 require => Augeas["iface-${device}-${family}"],
-                notify  => Exec["ifup-${device}"],
+                notify  => Exec["ifup-${device}-${family}"],
               }
 
               if $gateway {
@@ -67,7 +67,7 @@ define ipaddress (
                   context => '/files/etc/network/interfaces',
                   changes => "set ${cur_device}/gateway ${gateway}",
                   require => Augeas["static-${device}"],
-                  notify  => Exec["ifup-${device}"],
+                  notify  => Exec["ifup-${device}-${family}"],
                 }
 
                 $require_exec = [
