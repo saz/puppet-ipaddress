@@ -36,7 +36,7 @@ define ipaddress (
         present: {
           augeas { "auto-${device}-${family}":
             changes => "set auto[child::1 = '${device}']/1 ${device}",
-            onlyif  => "match auto/* ${device} == 0",
+            onlyif  => "match auto/* == ${device}",
             notify  => Exec["ifup-${device}"],
           }
 
