@@ -67,7 +67,7 @@ define ipaddress (
                 augeas { "gateway-${device}-${family}":
                   context => '/files/etc/network/interfaces',
                   changes => "set ${cur_device}/gateway ${gateway}",
-                  require => Augeas["static-${device}"],
+                  require => Augeas["static-${device}-${family}"],
                   notify  => Exec["ifup-${device}-${family}"],
                 }
 
