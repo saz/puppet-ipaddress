@@ -37,16 +37,6 @@ define ipaddress (
 
       case $ensure {
         present: {
-          augeas { "allow-hotplug-${device}-${family}":
-            changes => "rm allow-hotplug/*[.='${device}']",
-            onlyif  => 'match allow-hotplug/* size > 1',
-          }
-
-          augeas { "allow-hotplug-rm-${device}-${family}":
-            changes => 'rm allow-hotplug',
-            onlyif  => 'match allow-hotplug/* size == 1',
-          }
-
           augeas { "auto-${device}-${family}":
             changes => "set auto[child::1 = '${device}']/1 ${device}",
             onlyif  => "match auto/* not_include ${device}",
