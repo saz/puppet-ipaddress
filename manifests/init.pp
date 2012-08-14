@@ -39,11 +39,12 @@ define ipaddress (
         present: {
           augeas { "allow-hotplug-${device}-${family}":
             changes => "rm allow-hotplug/*[.='${device}']",
+            onlyif  => 'match allow-hotplug/* size > 1',
           }
 
           augeas { "allow-hotplug-rm-${device}-${family}":
             changes => 'rm allow-hotplug',
-            onlyif  => 'match allow-hotplug/* size == 0',
+            onlyif  => 'match allow-hotplug/* size == 1',
             require => Augeas["allow-hotplug-${device}-${family}"],
           }
 
