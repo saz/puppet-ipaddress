@@ -30,30 +30,36 @@ define ipaddress (
 
       # Set some default values
       Augeas {
-        incl => '/etc/network/interfaces',
-        lens => 'Interfaces.lns',
+        incl   => '/etc/network/interfaces',
+        lens   => 'Interfaces.lns',
+        notify => Exec["ifup-${device}-${family}"],
       }
 
       case $ensure {
         present: {
+          augeas { "allow-hotplug-${device}-${family}":
+            changes => "rm allow-hotplug/*[.='${device}']",
+          }
+
+          augeas { "allow-hotplug-rm-${device}-${family}":
+            changes => 'rm allow-hotplug',
+            onlyif  => 'match allow-hotplug/* size == 0',
+            require => Augeas["allow-hotplug-${device}-${family}"],
+          }
+
           augeas { "auto-${device}-${family}":
             changes => "set auto[child::1 = '${device}']/1 ${device}",
             onlyif  => "match auto/* not_include ${device}",
-            notify  => Exec["ifup-${device}-${family}"],
+            require => Augeas["allow-hotplug-rm-${device}-${family}"],
           }
 
           augeas { "iface-${device}-${family}":
             changes => [
-              #              "defnode curdev iface[last()+1] ${device}",
-              #"set \$curdev/family ${family}",
-              #"set \$curdev/method ${method}",
               "set ${cur_device} ${device}",
               "set ${cur_device}/family ${family}",
               "set ${cur_device}/method ${method}",
             ],
-            #            onlyif  => "get ${cur_device_family} != ${family}",
             require => Augeas["auto-${device}-${family}"],
-            notify  => Exec["ifup-${device}-${family}"],
           }
 
           case $method {
@@ -64,15 +70,12 @@ define ipaddress (
                   "set ${cur_device}/netmask ${netmask}",
                 ],
                 require => Augeas["iface-${device}-${family}"],
-                notify  => Exec["ifup-${device}-${family}"],
               }
 
               if $gateway {
                 augeas { "gateway-${device}-${family}":
-                  context => '/files/etc/network/interfaces',
                   changes => "set ${cur_device}/gateway ${gateway}",
                   require => Augeas["static-${device}-${family}"],
-                  notify  => Exec["ifup-${device}-${family}"],
                 }
 
                 $require_exec = [
