@@ -16,7 +16,7 @@ define ipaddress (
   $ipaddr,
   $netmask,
   $ensure = present,
-  $family = 'inet', 
+  $family = 'inet',
   $method = 'static',
   $gateway = undef
 ) {
@@ -26,6 +26,7 @@ define ipaddress (
       # Device string for augeas
       $cur_device = "iface[. = '${device}'][family='${family}']"
       $cur_device_family = "${cur_device}/family"
+      $cur_device_method = "${cur_device}/method"
 
       # Set some default values
       Augeas {
@@ -43,11 +44,14 @@ define ipaddress (
 
           augeas { "iface-${device}-${family}":
             changes => [
-              "defnode curdev iface[last()+1] ${device}",
-              "set \$curdev/family ${family}",
-              "set \$curdev/method ${method}",
+              #              "defnode curdev iface[last()+1] ${device}",
+              #"set \$curdev/family ${family}",
+              #"set \$curdev/method ${method}",
+              "set ${cur_device} ${device}",
+              "set ${cur_device}/family ${family}",
+              "set ${cur_device}/method ${method}",
             ],
-            onlyif  => "get ${cur_device_family} != ${family}",
+            #            onlyif  => "get ${cur_device_family} != ${family}",
             require => Augeas["auto-${device}-${family}"],
             notify  => Exec["ifup-${device}-${family}"],
           }
@@ -79,6 +83,9 @@ define ipaddress (
                 $require_exec = Augeas["static-${device}-${family}"]
               }
             }
+            default: {
+              fail("Method ${method} not implemented")
+            }
           }
 
           exec { "ifup-${device}-${family}":
@@ -86,6 +93,9 @@ define ipaddress (
             require     => $require_exec,
             refreshonly => true,
           }
+        }
+        default: {
+          fail('ensure must be set to present')
         }
       }
     }
