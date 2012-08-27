@@ -44,10 +44,11 @@ define ipaddress (
 
           augeas { "iface-${device}-${family}":
             changes => [
-              "set ${cur_device} ${device}",
-              "set ${cur_device}/family ${family}",
-              "set ${cur_device}/method ${method}",
+              "set iface[last()+1] ${device}",
+              "set iface[last()]/family ${family}",
+              "set iface[last()]/method ${method}",
             ],
+            onlyif  => "get iface[.='${device}'][family='${family}'][method='${method}'] != ${device}",
             require => Augeas["auto-${device}-${family}"],
           }
 
